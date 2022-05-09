@@ -167,6 +167,27 @@ bool reverbEnabled;
     pitchEnabled = false;
     eqEnabled = false;
     reverbEnabled = true;
+    
+    //PITCH
+    float pitch = (float)0;
+    OSStatus status = AudioUnitSetParameter(pitchAudioUnit, kNewTimePitchParam_Pitch, kAudioUnitScope_Global, 0, pitch, 0);
+    
+    //REVERB
+    if (noErr == status) {
+        status = AudioUnitSetParameter(reverbAudioUnit, kReverb2Param_DryWetMix, kAudioUnitScope_Global, 0, 70, 0);
+    }
+    if (noErr == status) {
+        status = AudioUnitSetParameter(reverbAudioUnit, kReverb2Param_RandomizeReflections, kAudioUnitScope_Global, 0, 1000, 0);
+    }
+    if (noErr == status) {
+        status = AudioUnitSetParameter(reverbAudioUnit, kReverb2Param_MaxDelayTime, kAudioUnitScope_Global, 0, 0.5, 0);
+    }
+    if (noErr == status) {
+        status = AudioUnitSetParameter(reverbAudioUnit, kReverb2Param_DecayTimeAt0Hz, kAudioUnitScope_Global, 0, 2, 0);
+    }
+    if (noErr == status) {
+        status = AudioUnitSetParameter(reverbAudioUnit, kReverb2Param_DecayTimeAtNyquist, kAudioUnitScope_Global, 0, 3, 0);
+    }
 }
 
 + (void) applyRadioEffect {
@@ -200,31 +221,31 @@ bool reverbEnabled;
     }
 }
 
-//- (void)setCurrentFilterType:(FilterType)currentFilterType {
-//    _currentFilterType = currentFilterType;
-//    processorFilterType = currentFilterType;
-//
-//    switch (currentFilterType) {
-//        case FilterTypeMan:
-//            [AudioManager applyManEffect];
-//            break;
-//        case FilterTypeMonster:
-//            [AudioManager applyMonsterEffect];
-//            break;
-//        case FilterTypeGirl:
-//            [AudioManager applyGirlEffect];
-//            break;
-//        case FilterTypeCartoon:
-//            [AudioManager applyCartoonEffect];
-//            break;
-//        case FilterTypeRoom:
-//            [AudioManager applyRoomEffect];
-//            break;
-//        case FilterTypeRadio:
-//            [AudioManager applyRadioEffect];
-//            break;
-//    }
-//}
+- (void)setCurrentFilterType: (FilterType)currentFilterType {
+    _currentFilterType = currentFilterType;
+    processorFilterType = currentFilterType;
+
+    switch (currentFilterType) {
+        case FilterTypeMan:
+            [AudioManager applyManEffect];
+            break;
+        case FilterTypeMonster:
+            [AudioManager applyMonsterEffect];
+            break;
+        case FilterTypeGirl:
+            [AudioManager applyGirlEffect];
+            break;
+        case FilterTypeCartoon:
+            [AudioManager applyCartoonEffect];
+            break;
+        case FilterTypeRoom:
+            [AudioManager applyRoomEffect];
+            break;
+        case FilterTypeRadio:
+            [AudioManager applyRadioEffect];
+            break;
+    }
+}
 
 - (void)stopProcessing {
     NSLog(@"AudioTapProcessor - stopProcessing");
@@ -288,6 +309,7 @@ bool reverbEnabled;
 static void tap_InitCallback(MTAudioProcessingTapRef tap, void *clientInfo, void **tapStorageOut) {
     AVAudioTapProcessorContext *context = calloc(1, sizeof(AVAudioTapProcessorContext));
     
+    // Initialize MTAdioProcessingTap context
     context->isNonInterleaved = false;
     context->audioUnitPitch = NULL;
     context->audioUnitDist = NULL;
@@ -303,6 +325,7 @@ static void tap_InitCallback(MTAudioProcessingTapRef tap, void *clientInfo, void
 static void tap_FinalizeCallback(MTAudioProcessingTapRef tap) {
     AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
     
+    // Clear MTAdioProcessingTap context
     context->self = NULL;
     
     free(context);
@@ -312,10 +335,12 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
     
     AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
     
+    // Verify processing format
     if (processingFormat->mFormatFlags & kAudioFormatFlagIsNonInterleaved) {
         context->isNonInterleaved = true;
     }
     
+    // Create bandpass filter Audio Unit
     AudioUnit audioUnitPitch;
     
     AudioComponentDescription audioComponentDescriptionPitch;
@@ -330,6 +355,7 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
         if (noErr == AudioComponentInstanceNew(audioComponentPitch, &audioUnitPitch)) {
             OSStatus status = noErr;
             
+            // Set audio unit input/output stream formate to processing format
             if (noErr == status) {
                 status = AudioUnitSetProperty(audioUnitPitch, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, processingFormat, sizeof(AudioStreamBasicDescription));
             }
@@ -337,6 +363,7 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
                 status = AudioUnitSetProperty(audioUnitPitch, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, processingFormat, sizeof(AudioStreamBasicDescription));
             }
             
+            // Set audio unit render callback
             if (noErr == status) {
                 AURenderCallbackStruct renderCallbackStruct;
                 renderCallbackStruct.inputProc = AU_PitchRenderCallback;
@@ -344,16 +371,13 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
                 status = AudioUnitSetProperty(audioUnitPitch, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &renderCallbackStruct, sizeof(AURenderCallbackStruct));
             }
             
+            // Set audio unit maximum frames per slice to max frames
             if (noErr == status) {
                 UInt32 maximumFramesPerSlice = (UInt32)maxFrames;
                 status = AudioUnitSetProperty(audioUnitPitch, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, (UInt32)sizeof(UInt32));
             }
             
-            if (noErr == status) {
-                float pitch = (float)-300;
-                status = AudioUnitSetParameter(audioUnitPitch, kNewTimePitchParam_Pitch, kAudioUnitScope_Global, 0, pitch, 0);
-            }
-            
+            // Initialize audio unit
             if (noErr == status) {
                 status = AudioUnitInitialize(audioUnitPitch);
             }
@@ -399,17 +423,6 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
             if (noErr == status) {
                 UInt32 maximumFramesPerSlice = (UInt32)maxFrames;
                 status = AudioUnitSetProperty(audioUnitDist, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, (UInt32)sizeof(UInt32));
-            }
-            
-            if (noErr == status) {
-                CFArrayRef presets;
-                UInt32 size = sizeof(presets);
-
-                AudioUnitGetProperty(audioUnitDist, kAudioUnitProperty_FactoryPresets, kAudioUnitScope_Global, 0, &presets, &size);
-                
-                AUPreset *aPreset = (AUPreset*)CFArrayGetValueAtIndex(presets, 21); // Waves
-
-                status = AudioUnitSetProperty(audioUnitDist, kAudioUnitProperty_PresentPreset, kAudioUnitScope_Global, 0, aPreset, sizeof(AUPreset));
             }
             
             if (noErr == status) {
@@ -507,22 +520,6 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
             }
             
             if (noErr == status) {
-                status = AudioUnitSetParameter(reverbUnit, kReverb2Param_DryWetMix, kAudioUnitScope_Global, 0, 70, 0);
-            }
-            if (noErr == status) {
-                status = AudioUnitSetParameter(reverbUnit, kReverb2Param_RandomizeReflections, kAudioUnitScope_Global, 0, 1000, 0);
-            }
-            if (noErr == status) {
-                status = AudioUnitSetParameter(reverbUnit, kReverb2Param_MaxDelayTime, kAudioUnitScope_Global, 0, 0.5, 0);
-            }
-            if (noErr == status) {
-                status = AudioUnitSetParameter(reverbUnit, kReverb2Param_DecayTimeAt0Hz, kAudioUnitScope_Global, 0, 2, 0);
-            }
-            if (noErr == status) {
-                status = AudioUnitSetParameter(reverbUnit, kReverb2Param_DecayTimeAtNyquist, kAudioUnitScope_Global, 0, 3, 0);
-            }
-            
-            if (noErr == status) {
                 status = AudioUnitInitialize(reverbUnit);
             }
             
@@ -535,32 +532,12 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
             reverbAudioUnit = reverbUnit;
         }
     }
-    
-    switch (processorFilterType) {
-        case FilterTypeMan:
-            [AudioManager applyManEffect];
-            break;
-        case FilterTypeMonster:
-            [AudioManager applyMonsterEffect];
-            break;
-        case FilterTypeGirl:
-            [AudioManager applyGirlEffect];
-            break;
-        case FilterTypeCartoon:
-            [AudioManager applyCartoonEffect];
-            break;
-        case FilterTypeRoom:
-            [AudioManager applyRoomEffect];
-            break;
-        case FilterTypeRadio:
-            [AudioManager applyRadioEffect];
-            break;
-    }
 }
 
 static void tap_UnprepareCallback(MTAudioProcessingTapRef tap) {
     AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
     
+    // Release bandpass filter Audio Unit
     if (context->audioUnitPitch) {
         AudioUnitUninitialize(context->audioUnitPitch);
         AudioComponentInstanceDispose(context->audioUnitPitch);
@@ -593,11 +570,13 @@ static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberF
     
     AudioManager * self = ((__bridge AudioManager *)context->self);
     
+    // Skip processing when format not supported
     if (!self) {
       NSLog(@"AudioTapProcessor - processCallback CANCELLED (self is nil)");
       return;
     }
     
+    // Apply bandpass filter Audio Unit
     if (self.isFilterEnabled) {
         AudioTimeStamp audioTimeStamp;
         audioTimeStamp.mSampleTime = context->sampleCount;
@@ -618,11 +597,13 @@ static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberF
             return;
         }
         
+        // Increment sample count for Audio Unit
         context->sampleCount += numberFrames;
         processedFrames += numberFrames;
-        
+        // Set number of frames out
         *numberFramesOut = numberFrames;
     } else {
+        // Get actual audio buffers
         status = MTAudioProcessingTapGetSourceAudio(tap, numberFrames, bufferListInOut, flagsOut, NULL, numberFramesOut);
         if (noErr != status) {
             NSLog(@"MTAudioProcessingTapGetSourceAudio: %d", (int)status);
@@ -638,6 +619,7 @@ OSStatus AU_PitchRenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAc
     AudioTimeStamp audioTimeStamp;
     audioTimeStamp.mSampleTime = processedFrames;
     audioTimeStamp.mFlags = kAudioTimeStampSampleTimeValid;
+    
     if (eqEnabled) {
         return AudioUnitRender(eqAudioUnit, 0, &audioTimeStamp, 0, inNumberFrames, ioData);
     }
@@ -647,6 +629,7 @@ OSStatus AU_PitchRenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAc
     if (reverbEnabled) {
         return AudioUnitRender(reverbAudioUnit, 0, &audioTimeStamp, 0, inNumberFrames, ioData);
     }
+    // Return audio buffers
     return MTAudioProcessingTapGetSourceAudio(inRefCon, inNumberFrames, ioData, NULL, NULL, NULL);
 }
 
@@ -662,19 +645,22 @@ OSStatus AU_EQRenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActio
     if (reverbEnabled) {
         return AudioUnitRender(reverbAudioUnit, 0, &audioTimeStamp, 0, inNumberFrames, ioData);
     }
+    
     return MTAudioProcessingTapGetSourceAudio(inRefCon, inNumberFrames, ioData, NULL, NULL, NULL);
 }
 
 OSStatus AU_ReverbRenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) {
+    
     return MTAudioProcessingTapGetSourceAudio(inRefCon, inNumberFrames, ioData, NULL, NULL, NULL);
 }
 
 OSStatus AU_DistRenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) {
+    
+    AudioTimeStamp audioTimeStamp;
+    audioTimeStamp.mSampleTime = processedFrames;
+    audioTimeStamp.mFlags = kAudioTimeStampSampleTimeValid;
+    
     if (reverbEnabled) {
-        AudioTimeStamp audioTimeStamp;
-        audioTimeStamp.mSampleTime = processedFrames;
-        audioTimeStamp.mFlags = kAudioTimeStampSampleTimeValid;
-        
         return AudioUnitRender(reverbAudioUnit, 0, &audioTimeStamp, 0, inNumberFrames, ioData);
     }
     return MTAudioProcessingTapGetSourceAudio(inRefCon, inNumberFrames, ioData, NULL, NULL, NULL);
