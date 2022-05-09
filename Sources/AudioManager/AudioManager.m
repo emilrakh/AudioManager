@@ -200,31 +200,31 @@ bool reverbEnabled;
     }
 }
 
-- (void)setCurrentFilterType:(FilterType)currentFilterType {
-    _currentFilterType = currentFilterType;
-    processorFilterType = currentFilterType;
-    
-    switch (currentFilterType) {
-        case FilterTypeMan:
-            [AudioManager applyManEffect];
-            break;
-        case FilterTypeMonster:
-            [AudioManager applyMonsterEffect];
-            break;
-        case FilterTypeGirl:
-            [AudioManager applyGirlEffect];
-            break;
-        case FilterTypeCartoon:
-            [AudioManager applyCartoonEffect];
-            break;
-        case FilterTypeRoom:
-            [AudioManager applyRoomEffect];
-            break;
-        case FilterTypeRadio:
-            [AudioManager applyRadioEffect];
-            break;
-    }
-}
+//- (void)setCurrentFilterType:(FilterType)currentFilterType {
+//    _currentFilterType = currentFilterType;
+//    processorFilterType = currentFilterType;
+//
+//    switch (currentFilterType) {
+//        case FilterTypeMan:
+//            [AudioManager applyManEffect];
+//            break;
+//        case FilterTypeMonster:
+//            [AudioManager applyMonsterEffect];
+//            break;
+//        case FilterTypeGirl:
+//            [AudioManager applyGirlEffect];
+//            break;
+//        case FilterTypeCartoon:
+//            [AudioManager applyCartoonEffect];
+//            break;
+//        case FilterTypeRoom:
+//            [AudioManager applyRoomEffect];
+//            break;
+//        case FilterTypeRadio:
+//            [AudioManager applyRadioEffect];
+//            break;
+//    }
+//}
 
 - (void)stopProcessing {
     NSLog(@"AudioTapProcessor - stopProcessing");
