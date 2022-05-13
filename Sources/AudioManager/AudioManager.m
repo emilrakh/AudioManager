@@ -220,12 +220,9 @@ bool reverbEnabled;
 }
 
 - (void)setCurrentFilterType: (FilterType)currentFilterType {
-    
-    NSLog(@"Stack trace : %@",[NSThread callStackSymbols]);
-
     switch (currentFilterType) {
         case FilterTypeMan:
-//            [AudioManager applyManEffect];
+            [AudioManager applyManEffect];
             break;
         case FilterTypeMonster:
             [AudioManager applyMonsterEffect];
