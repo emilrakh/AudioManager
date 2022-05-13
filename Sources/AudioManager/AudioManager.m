@@ -9,7 +9,7 @@
 
 #import "AudioManager.h"
 
-typedef struct AVAudioTapProcessorContext {
+typedef struct AVAudioManagerContext {
     Boolean isNonInterleaved;
     AudioUnit audioUnitPitch;
     AudioUnit audioUnitDist;
@@ -18,7 +18,7 @@ typedef struct AVAudioTapProcessorContext {
     Float64 sampleCount;
     NSInteger audioEffectType;
     void *self;
-} AVAudioTapProcessorContext;
+} AVAudioManagerContext;
 
 static void tap_InitCallback(MTAudioProcessingTapRef tap, void *clientInfo, void **tapStorageOut);
 static void tap_FinalizeCallback(MTAudioProcessingTapRef tap);
@@ -77,7 +77,6 @@ bool reverbEnabled;
     
     CFArrayRef presets;
     UInt32 size = sizeof(presets);
-
     
     //DIST
     AudioUnitGetProperty(distAudioUnit, kAudioUnitProperty_FactoryPresets, kAudioUnitScope_Global, 0, &presets, &size);
@@ -89,7 +88,6 @@ bool reverbEnabled;
     if (noErr != status) NSLog(@"AudioUnitSetParameter(kAudioUnitProperty_PresentPreset): %d", (int)status);
     
     status = AudioUnitSetParameter(distAudioUnit, kDistortionParam_FinalMix, kAudioUnitScope_Global, 0, 10, 0);
-    
     
     //EQ
     UInt32 numberOfBands = (UInt32)3;
@@ -248,10 +246,10 @@ bool reverbEnabled;
 }
 
 - (void)stopProcessing {
-    NSLog(@"AudioTapProcessor - stopProcessing");
+    NSLog(@"AudioManager - stopProcessing");
     AVMutableAudioMixInputParameters *params = (AVMutableAudioMixInputParameters *)_audioMix.inputParameters[0];
     MTAudioProcessingTapRef audioProcessingTap = params.audioTapProcessor;
-    AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(audioProcessingTap);
+    AVAudioManagerContext *context = (AVAudioManagerContext *)MTAudioProcessingTapGetStorage(audioProcessingTap);
 
     context->self = NULL;
     params.audioTapProcessor = NULL;
@@ -307,7 +305,7 @@ bool reverbEnabled;
 #pragma mark - MTAudioProcessingTap Callbacks
 
 static void tap_InitCallback(MTAudioProcessingTapRef tap, void *clientInfo, void **tapStorageOut) {
-    AVAudioTapProcessorContext *context = calloc(1, sizeof(AVAudioTapProcessorContext));
+    AVAudioManagerContext *context = calloc(1, sizeof(AVAudioManagerContext));
     
     // Initialize MTAdioProcessingTap context
     context->isNonInterleaved = false;
@@ -323,7 +321,7 @@ static void tap_InitCallback(MTAudioProcessingTapRef tap, void *clientInfo, void
 }
 
 static void tap_FinalizeCallback(MTAudioProcessingTapRef tap) {
-    AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
+    AVAudioManagerContext *context = (AVAudioManagerContext *)MTAudioProcessingTapGetStorage(tap);
     
     // Clear MTAdioProcessingTap context
     context->self = NULL;
@@ -333,7 +331,7 @@ static void tap_FinalizeCallback(MTAudioProcessingTapRef tap) {
 
 static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFrames, const AudioStreamBasicDescription *processingFormat) {
     
-    AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
+    AVAudioManagerContext *context = (AVAudioManagerContext *)MTAudioProcessingTapGetStorage(tap);
     
     // Verify processing format
     if (processingFormat->mFormatFlags & kAudioFormatFlagIsNonInterleaved) {
@@ -535,7 +533,7 @@ static void tap_PrepareCallback(MTAudioProcessingTapRef tap, CMItemCount maxFram
 }
 
 static void tap_UnprepareCallback(MTAudioProcessingTapRef tap) {
-    AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
+    AVAudioManagerContext *context = (AVAudioManagerContext *)MTAudioProcessingTapGetStorage(tap);
     
     // Release bandpass filter Audio Unit
     if (context->audioUnitPitch) {
@@ -564,7 +562,7 @@ static void tap_UnprepareCallback(MTAudioProcessingTapRef tap) {
 }
 
 static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberFrames, MTAudioProcessingTapFlags flags, AudioBufferList *bufferListInOut, CMItemCount *numberFramesOut, MTAudioProcessingTapFlags *flagsOut) {
-    AVAudioTapProcessorContext *context = (AVAudioTapProcessorContext *)MTAudioProcessingTapGetStorage(tap);
+    AVAudioManagerContext *context = (AVAudioManagerContext *)MTAudioProcessingTapGetStorage(tap);
     
     OSStatus status;
     
@@ -572,7 +570,7 @@ static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberF
     
     // Skip processing when format not supported
     if (!self) {
-      NSLog(@"AudioTapProcessor - processCallback CANCELLED (self is nil)");
+      NSLog(@"AudioManager - processCallback CANCELLED");
       return;
     }
     
@@ -593,7 +591,7 @@ static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberF
         }
         
         if (noErr != status) {
-            NSLog(@"AudioUnitRender(): %d", (int)status);
+            NSLog(@"AudioUnitRender: %d", (int)status);
             return;
         }
         
