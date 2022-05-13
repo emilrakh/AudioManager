@@ -219,8 +219,7 @@ bool reverbEnabled;
     }
 }
 
-//- (void)setCurrentFilterType: (FilterType)currentFilterType {
-- (void)setCurrent: (FilterType)currentFilterType {
+- (void)setCurrentFilterType: (FilterType)currentFilterType {
     
     NSLog(@"Stack trace : %@",[NSThread callStackSymbols]);
 
