@@ -38,8 +38,6 @@ static OSStatus AU_ReverbRenderCallback(void *inRefCon, AudioUnitRenderActionFla
 }
 @end
 
-//FilterType processorFilterType;
-
 UInt64 processedFrames;
 AudioUnit distAudioUnit;
 AudioUnit pitchAudioUnit;
@@ -579,14 +577,11 @@ static void tap_ProcessCallback(MTAudioProcessingTapRef tap, CMItemCount numberF
         
         if (pitchEnabled) {
             status = AudioUnitRender(context->audioUnitPitch, 0, &audioTimeStamp, 0, (UInt32)numberFrames, bufferListInOut);
-        }
-        if (eqEnabled) {
+        } else if (eqEnabled) {
             status = AudioUnitRender(context->audioUnitEQ, 0, &audioTimeStamp, 0, (UInt32)numberFrames, bufferListInOut);
-        }
-        if (distortionEnabled) {
+        } else if (distortionEnabled) {
             status = AudioUnitRender(context->audioUnitDist, 0, &audioTimeStamp, 0, (UInt32)numberFrames, bufferListInOut);
-        }
-        if (reverbEnabled) {
+        } else {
             status = AudioUnitRender(context->audioUnitReverb, 0, &audioTimeStamp, 0, (UInt32)numberFrames, bufferListInOut);
         }
         
