@@ -5,8 +5,6 @@
 //  Created by Emil Rakhmangulov on 04.05.2022.
 //
 
-//#include <UIKit/UIKit.h>
-
 #import "AudioManager.h"
 
 typedef struct AVAudioManagerContext {
@@ -51,8 +49,8 @@ bool reverbEnabled;
 
 @implementation AudioManager
 
-+(void)applyManEffect {
-    distortionEnabled = false;
++(void) applyManEffect {
+    distortionEnabled = true;
     pitchEnabled = true;
     eqEnabled = false;
     reverbEnabled = false;
@@ -61,6 +59,20 @@ bool reverbEnabled;
     float pitch = (float)-400;
     OSStatus status = AudioUnitSetParameter(pitchAudioUnit, kNewTimePitchParam_Pitch, kAudioUnitScope_Global, 0, pitch, 0);
     if (noErr != status) NSLog(@"AudioUnitSetParameter(kNewTimePitchParam_Pitch): %d", (int)status);
+    
+    CFArrayRef presets;
+    UInt32 size = sizeof(presets);
+    
+    //DIST
+    AudioUnitGetProperty(distAudioUnit, kAudioUnitProperty_FactoryPresets, kAudioUnitScope_Global, 0, &presets, &size);
+
+    AUPreset *aPreset = (AUPreset*)CFArrayGetValueAtIndex(presets, 10); // Waves
+
+    status = AudioUnitSetProperty(distAudioUnit, kAudioUnitProperty_PresentPreset, kAudioUnitScope_Global, 0, aPreset, sizeof(AUPreset));
+
+    if (noErr != status) NSLog(@"AudioUnitSetParameter(kAudioUnitProperty_PresentPreset): %d", (int)status);
+
+    status = AudioUnitSetParameter(distAudioUnit, kDistortionParam_FinalMix, kAudioUnitScope_Global, 0, 10, 0);
 }
 
 + (void) applyMonsterEffect {
@@ -79,7 +91,7 @@ bool reverbEnabled;
     //DIST
     AudioUnitGetProperty(distAudioUnit, kAudioUnitProperty_FactoryPresets, kAudioUnitScope_Global, 0, &presets, &size);
 
-    AUPreset *aPreset = (AUPreset*)CFArrayGetValueAtIndex(presets, 21); // Waves
+    AUPreset *aPreset = (AUPreset*)CFArrayGetValueAtIndex(presets, 10); // Waves
 
     status = AudioUnitSetProperty(distAudioUnit, kAudioUnitProperty_PresentPreset, kAudioUnitScope_Global, 0, aPreset, sizeof(AUPreset));
     
@@ -112,7 +124,7 @@ bool reverbEnabled;
     }
 }
 
-+ (void)applyGirlEffect {
++ (void) applyGirlEffect {
     distortionEnabled = false;
     pitchEnabled = true;
     eqEnabled = true;
@@ -197,11 +209,11 @@ bool reverbEnabled;
     OSStatus status = AudioUnitSetProperty(eqAudioUnit, kAUNBandEQProperty_NumberOfBands, kAudioUnitScope_Global, 0, &numberOfBands, (UInt32)sizeof(UInt32));
 
     if (noErr == status) {
-        status = AudioUnitSetParameter(eqAudioUnit, kAUNBandEQParam_Frequency, kAudioUnitScope_Global, 0, 5000, 0);
-    }
-
-    if (noErr == status) {
         status = AudioUnitSetParameter(eqAudioUnit, kAUNBandEQParam_FilterType, kAudioUnitScope_Global, 0, kAUNBandEQFilterType_BandPass, 0);
+    }
+    
+    if (noErr == status) {
+        status = AudioUnitSetParameter(eqAudioUnit, kAUNBandEQParam_Frequency, kAudioUnitScope_Global, 0, 5000, 0);
     }
     
     if (noErr == status) {
